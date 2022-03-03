@@ -76,11 +76,38 @@ class BBTreeNode():
         root = self
         res = root.buildProblem().solve(solver='cvxopt')
         heap = [(res, next(counter), root)]
+        # best result of maximized objective function
         bestres = -1e20 # a small arbitrary initial best objective value
+        # values of variables for bestres
         bestnode_vars = root.vars # initialize bestnode_vars to the root vars
 
-        #TODO: fill this part in
+        while len(heap) > 0:
+            _, _, n = hq.heappop(heap)
+            try:
+                currentres = n.prob.solve(solver="cvxopt")
+                print("Objective value: {}".format(n.prob.value))
+            except:
+                print("Pruned, infeasible solution")
+                pass
 
-        
+            if bestres > currentres.value:
+                print("Pruned, not better than bestres")
+                pass
+
+            elif n.is_integral():
+                # bestres = float(n.prob.value)
+                bestres = float(n.vars[-1])
+                bestnode_vars = [val.value for val in n.vars]
+                print("New bestres: {}\nNew bestnode_vars: {}".format(bestres, bestnode_vars))
+
+            else:
+                for val in n.vars:
+                    if val.value != None and abs(round(val) - float(val)) > 1e-4:
+                        hq.heappush(heap, (float(bestres), next(counter), n.branch_floor(val)))
+                        hq.heappush(heap, (float(bestres), next(counter), n.branch_ceil(val)))
+                        print("Branched")
+                        break
+        if bestres == -1e20:
+            print("No feasible solutions")
         return bestres, bestnode_vars
  
